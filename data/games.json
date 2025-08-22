@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "title": "Final Fantasy VII",
+    "console": "PlayStation",
+    "image_url": "https://example.com/ff7.jpg",
+    "status": "Not Started",
+    "completion_time": "",
+    "date_started": "",
+    "date_finished": "",
+    "rating": 0,
+    "notes": ""
+  },
+  {
+    "id": 2,
+    "title": "Metal Gear Solid",
+    "console": "PlayStation",
+    "image_url": "https://example.com/mgs.jpg",
+    "status": "In Progress",
+    "completion_time": "",
+    "date_started": "",
+    "date_finished": "",
+    "rating": 0,
+    "notes": ""
+  }
+]

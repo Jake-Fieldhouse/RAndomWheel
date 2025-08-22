@@ -1,0 +1,6 @@
+body { font-family: sans-serif; margin:20px; background:#0b1020; color:#e5e7eb; }
+nav ul { list-style:none; padding:0; display:flex; gap:10px; }
+nav a { color:#38bdf8; text-decoration:none; }
+#wheel { border:2px solid #1f2a44; border-radius:50%; }
+body.obs #overlay { display:flex; gap:20px; align-items:center; }
+body.obs { background:transparent; }
