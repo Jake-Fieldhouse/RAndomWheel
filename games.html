@@ -8,13 +8,33 @@
 </head>
 <body>
   <h1>Game Management</h1>
-  <input id="search" placeholder="Search games">
+  <div id="filters">
+    <input id="search" placeholder="Search games">
+    <select id="consoleFilter"><option value="">All Consoles</option></select>
+    <select id="statusFilter"><option value="">All Statuses</option></select>
+  </div>
   <table id="gamesTable">
     <thead>
-      <tr><th>Title</th><th>Console</th><th>Status</th><th>Actions</th></tr>
+      <tr><th>Title</th><th>Console</th><th>Status</th><th>Rating</th><th>Notes</th><th>Actions</th></tr>
     </thead>
     <tbody></tbody>
   </table>
+
+  <dialog id="editDialog">
+    <form method="dialog">
+      <label>Status <select id="editStatus"><option>Not Started</option><option>In Progress</option><option>Completed</option></select></label>
+      <label>Completion Time <input id="editCompletion" placeholder="10h 30m"></label>
+      <label>Start Date <input type="date" id="editStart"></label>
+      <label>Finish Date <input type="date" id="editFinish"></label>
+      <label>Rating <input type="number" id="editRating" min="1" max="10"></label>
+      <label>Notes <textarea id="editNotes"></textarea></label>
+      <menu>
+        <button value="cancel">Cancel</button>
+        <button id="saveEdit" value="default">Save</button>
+      </menu>
+    </form>
+  </dialog>
+
   <script type="module" src="js/gameManager.js"></script>
 </body>
 </html>

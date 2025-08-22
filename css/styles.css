@@ -4,3 +4,13 @@ nav a { color:#38bdf8; text-decoration:none; }
 #wheel { border:2px solid #1f2a44; border-radius:50%; }
 body.obs #overlay { display:flex; gap:20px; align-items:center; }
 body.obs { background:transparent; }
+body.obs #overlay > div:first-child { display:flex; flex-direction:column; align-items:center; }
+table { border-collapse: collapse; width:100%; margin-top:10px; }
+th, td { border:1px solid #1f2a44; padding:4px 8px; }
+#filters { display:flex; gap:10px; margin-bottom:10px; }
+button { background:#1f2a44; color:#e5e7eb; border:none; padding:5px 10px; cursor:pointer; }
+button:hover { background:#27324d; }
+body.obs img { width:120px; height:auto; }
+dialog { background:#1f2a44; color:#e5e7eb; padding:20px; border:none; border-radius:8px; }
+dialog form { display:flex; flex-direction:column; gap:10px; }
+#branding { font-size:24px; margin:0; }
