@@ -1,0 +1,7 @@
+{
+  "name": "random-wheel",
+  "type": "module",
+  "scripts": {
+    "test": "node --check js/gameManager.js js/wheelLogic.js js/obs.js js/retroAchievements.js"
+  }
+}
