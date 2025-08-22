@@ -4,10 +4,10 @@ A lightweight HTML/CSS/JS application for tracking RetroAchievements game comple
 
 ## Features
 - Tracks game status, rating and notes in local JSON storage
-- Spinning wheel to choose a random unfinished game
-- Management page to search and update games
-- OBS overlay displaying current game information and challenge progress
-- RetroAchievements API helper (stub) for future integration
+- Animated spinning wheel to choose a random unfinished game
+- Management page with search, filtering and detailed editing
+- OBS overlay displaying current game information, PSFest branding and challenge progress
+- RetroAchievements API helper with caching for future integration
 
 ## Structure
 ```
