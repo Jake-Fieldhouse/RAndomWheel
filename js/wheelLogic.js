@@ -1,4 +1,4 @@
-import { loadGames, saveGames } from './gameManager.js';
+import { loadGames, saveGames, loadSettings, saveSettings } from './gameManager.js';
 
 const canvas = document.getElementById('wheel');
 const spinBtn = document.getElementById('spin');
@@ -7,6 +7,7 @@ const resultDiv = document.getElementById('result');
 if (canvas && spinBtn) {
   const ctx = canvas.getContext('2d');
   let games = [];
+  let settings;
   let angle = 0;
 
   function drawWheel(items) {
@@ -28,15 +29,18 @@ if (canvas && spinBtn) {
     });
   }
 
-  function spinWheel() {
+  async function spinWheel() {
     const selected = games[Math.floor(Math.random() * games.length)];
     resultDiv.textContent = `${selected.title} (${selected.console})`;
     selected.status = 'In Progress';
-    saveGames(games);
+    settings.current_game_id = selected.id;
+    await Promise.all([saveGames(games), saveSettings(settings)]);
   }
 
   (async () => {
-    games = (await loadGames()).filter(g => g.status !== 'Completed');
+    const [loadedGames, loadedSettings] = await Promise.all([loadGames(), loadSettings()]);
+    games = loadedGames.filter(g => g.status !== 'Completed');
+    settings = loadedSettings;
     drawWheel(games);
     spinBtn.addEventListener('click', spinWheel);
   })();
