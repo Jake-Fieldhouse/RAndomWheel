@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RetroAchievements Game Picker (Inline Mock + Live API)</title>
+  <style>
+    :root { --bg:#0b1020; --panel:#0f162b; --fg:#e5e7eb; --muted:#9ca3af; --line:#1f2a44; --accent:#38bdf8; --accent-2:#a78bfa; --bad:#ef4444; --good:#22c55e; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji"; background:var(--bg); color:var(--fg); }
+
+    header { padding: 18px 20px; border-bottom: 1px solid var(--line); display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+    header h1 { font-size: 18px; margin:0; font-weight: 700; letter-spacing:.2px; }
+    header .sub { color: var(--muted); font-size: 12px; }
+
+    .wrap { display:grid; grid-template-columns: 1.2fr .9fr; gap: 24px; padding: 20px; max-width: 1400px; margin: 0 auto; }
+    @media (max-width: 1100px) { .wrap { grid-template-columns: 1fr; } }
+
+    .card { background: var(--panel); border:1px solid var(--line); border-radius: 16px; padding: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.33); }
+    .controls { display:flex; align-items:center; gap:10px; margin: 10px 0 0; flex-wrap:wrap; }
+    button { background: var(--accent); color:#03101a; font-weight: 800; border: none; padding: 10px 14px; border-radius: 12px; cursor:pointer; font-size: 14px; }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    .meta { font-size: 12px; color:var(--muted); margin-top:8px; }
+
+    .wheel-wrap { position: relative; display:flex; align-items:center; justify-content:center; padding: 10px; }
+    canvas { display:block; width: 100%; height: auto; max-width: 720px; aspect-ratio: 1 / 1; }
+    .pointer { position:absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 16px solid transparent; border-right: 16px solid transparent; border-bottom: 26px solid #f8fafc; filter: drop-shadow(0 2px 6px rgba(0,0,0,.5)); }
+
+    .result { margin-top: 10px; padding: 12px 14px; border-radius: 12px; background:#0a1226; border:1px solid #192244; min-height:60px; display:grid; grid-template-columns: 56px 1fr; gap:12px; align-items:center; }
+    .result img { width:56px; height:56px; border-radius:10px; border:1px solid var(--line); object-fit:cover; }
+    .result .title { font-weight: 700; }
+    .result .links { display:flex; gap:10px; margin-top: 4px; }
+    .result a { color: #c4b5fd; text-decoration: none; font-size: 13px; }
+
+    .side { display:grid; gap: 16px; }
+
+    .section h3 { margin: 0 0 10px; font-size: 14px; letter-spacing:.2px; color:#f3f4f6; }
+    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .row > * { flex: 1 1 140px; }
+    input[type="text"], input[type="password"], input[type="url"], select { width:100%; background:#091226; color:#e5e7eb; border:1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 14px; }
+    label { font-size: 12px; color: var(--muted); display:block; margin-bottom:6px; }
+    .switch { display:flex; align-items:center; gap: 8px; font-size: 13px; color: #d1d5db; }
+
+    .filters { display:grid; grid-template-columns: repeat(2, 1fr); gap:10px; }
+    @media (max-width: 460px){ .filters { grid-template-columns: 1fr; } }
+
+    .list { max-height: 560px; overflow:auto; border-radius: 12px; border: 1px solid var(--line); }
+    .list h3 { margin: 0; padding: 12px 14px; border-bottom: 1px solid var(--line); font-size: 14px; letter-spacing:.2px; }
+    .list .hint { padding: 0 14px 10px; color: var(--muted); font-size:12px; }
+    .grid { display:grid; grid-template-columns: 1fr; }
+    .game { display:grid; grid-template-columns: 52px 1fr auto; gap: 10px; padding: 10px 14px; border-top: 1px solid var(--line); align-items:center; }
+    .game:first-child { border-top: none; }
+    .game img { width:52px; height:52px; border-radius:10px; border:1px solid var(--line); object-fit:cover; }
+    .game .gtitle { font-weight:600; }
+    .badge { display:inline-block; padding: 2px 8px; border-radius: 999px; border:1px solid var(--line); font-size: 11px; color:#cbd5e1; }
+
+    footer { text-align:center; color:var(--muted); font-size:12px; padding: 16px; }
+    code.badge { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background:#071022; color:#a5b4fc; border:1px solid #1a2340; padding:2px 6px; border-radius:8px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>RetroAchievements Game Picker</h1>
+    <span class="sub">Inline mock data • Paste JSON • or Live API (with optional CORS proxy)</span>
+  </header>
+
+  <main class="wrap">
+    <!-- LEFT: Wheel + output -->
+    <section class="card">
+      <div class="wheel-wrap">
+        <div class="pointer" aria-hidden="true"></div>
+        <canvas id="wheel" width="720" height="720" aria-label="Spinning selection wheel"></canvas>
+      </div>
+      <div class="controls">
+        <button id="spinBtn">🎮 Spin</button>
+        <button id="shuffleBtn" title="Randomize slice order">Shuffle</button>
+        <button id="confettiBtn" title="Celebrate!">✨</button>
+        <span class="meta" id="countMeta"></span>
+      </div>
+      <div class="result" id="result" role="status" aria-live="polite">
+        <img id="resultIcon" alt="" src="" />
+        <div>
+          <div class="title" id="resultTitle">Ready.</div>
+          <div class="links">
+            <a id="resultLink" href="#" target="_blank" rel="noopener">Open on RA</a>
+            <a id="copyLink" href="#">Copy link</a>
+          </div>
+        </div>
+      </div>
+      <p class="meta">Tip: For live API, you'll need your RA <code class="badge">username</code> and <code class="badge">webApiKey</code>. In browsers, CORS may block direct calls; use a personal proxy URL if needed. See the sidebar.</p>
+    </section>
+
+    <!-- RIGHT: Data + Filters + List -->
+    <aside class="side">
+      <!-- Data Source -->
+      <section class="card section" id="dataSection">
+        <h3>1) Load Data</h3>
+        <div class="row">
+          <div>
+            <label for="source">Source</label>
+            <select id="source">
+              <option value="mock">Inline mock (sample)</option>
+              <option value="paste">Paste JSON (Completion Progress)</option>
+              <option value="api">Live API (username + key)</option>
+            </select>
+          </div>
+          <div id="apiUserWrap">
+            <label for="apiUser">RA username</label>
+            <input id="apiUser" type="text" placeholder="Your RA username" />
+          </div>
+          <div id="apiKeyWrap">
+            <label for="apiKey">Web API key</label>
+            <input id="apiKey" type="password" placeholder="••••••••" />
+          </div>
+        </div>
+        <div class="row" id="proxyRow">
+          <div>
+            <label for="proxy">Optional CORS proxy (prefix)</label>
+            <input id="proxy" type="url" placeholder="https://your-worker.example.com/" />
+          </div>
+          <div>
+            <label for="pageSize">Page size</label>
+            <select id="pageSize">
+              <option>100</option>
+              <option selected>500</option>
+            </select>
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <button id="loadBtn">Load</button>
+          </div>
+        </div>
+        <details id="pasteBox">
+          <summary>Paste JSON here (from <code class="badge">get-user-completion-progress</code>)</summary>
+          <textarea id="pasteJson" style="width:100%;min-height:160px;background:#0a1226;color:#e5e7eb;border:1px solid var(--line);border-radius:12px;padding:10px"></textarea>
+          <div class="row" style="margin-top:8px">
+            <button id="loadPasteBtn">Load pasted JSON</button>
+          </div>
+        </details>
+        <div class="meta">Saved locally. Your key stays in this browser only (localStorage).
+          
+        </div>
+      </section>
+
+      <!-- Filters / Weighting -->
+      <section class="card section">
+        <h3>2) Filters & Weighting</h3>
+        <div class="filters">
+          <label class="switch"><input type="checkbox" id="onlyUnfinished" /> Only unfinished (not mastery)</label>
+          <label class="switch"><input type="checkbox" id="hardcoreOnly" /> Hardcore-focused</label>
+          <label class="switch"><input type="checkbox" id="excludeHacks" /> Exclude hacks/homebrew</label>
+          <label class="switch"><input type="checkbox" id="excludeRecent" /> Exclude recently played (14d)</label>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <div>
+            <label for="consoleFilter">Console</label>
+            <input id="consoleFilter" type="text" placeholder="e.g., Mega Drive" />
+          </div>
+          <div>
+            <label for="search">Search title</label>
+            <input id="search" type="text" placeholder="Filter titles" />
+          </div>
+        </div>
+        <div class="row" style="margin-top:6px">
+          <div>
+            <label for="weightMode">Weight mode (spin bias)</label>
+            <select id="weightMode">
+              <option value="uniform">Uniform (pure random)</option>
+              <option value="older">Favor not played recently</option>
+              <option value="unfinished">Favor unfinished games</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- Current pool -->
+      <section class="card list section">
+        <h3>3) Current Game Pool</h3>
+        <div class="hint" id="poolMeta">—</div>
+        <div id="gameList" class="grid"></div>
+      </section>
+    </aside>
+  </main>
+
+  <!-- ===== Inline mock JSON (User Completion Progress shape) ===== -->
+  <script id="mockCompletion" type="application/json">
+  {
+    "Count": 12,
+    "Total": 12,
+    "Results": [
+      {"GameID": 14402, "Title": "Sonic the Hedgehog", "ImageIcon": "/Images/034132.png", "ConsoleID": 1, "ConsoleName": "Mega Drive / Genesis", "MaxPossible": 100, "NumAwarded": 25, "NumAwardedHardcore": 20, "MostRecentAwardedDate": "2024-12-01T22:30:00+00:00", "HighestAwardKind": "beaten-hardcore", "HighestAwardDate": "2024-12-01T22:30:00+00:00"},
+      {"GameID": 4631, "Title": "Super Metroid", "ImageIcon": "/Images/012345.png", "ConsoleID": 3, "ConsoleName": "SNES / Super Famicom", "MaxPossible": 200, "NumAwarded": 40, "NumAwardedHardcore": 0, "MostRecentAwardedDate": "2023-08-22T14:12:00+00:00", "HighestAwardKind": null, "HighestAwardDate": null},
+      {"GameID": 55123, "Title": "Castlevania: Symphony of the Night", "ImageIcon": "/Images/067890.png", "ConsoleID": 5, "ConsoleName": "PlayStation", "MaxPossible": 300, "NumAwarded": 8, "NumAwardedHardcore": 0, "MostRecentAwardedDate": "2025-07-02T09:05:00+00:00", "HighestAwardKind": null, "HighestAwardDate": null},
+      {"GameID": 90123, "Title": "~Hack~ Crystal Caverns", "ImageIcon": "/Images/099999.png", "ConsoleID": 1, "ConsoleName": "Mega Drive / Genesis", "MaxPossible": 120, "NumAwarded": 0, "NumAwardedHardcore": 0, "MostRecentAwardedDate": null, "HighestAwardKind": null, "HighestAwardDate": null},
+      {"GameID": 32551, "Title": "The Legend of Zelda: A Link to the Past", "ImageIcon": "/Images/045612.png", "ConsoleID": 3, "ConsoleName": "SNES / Super Famicom", "MaxPossible": 250, "NumAwarded": 250, "NumAwardedHardcore": 250, "MostRecentAwardedDate": "2022-12-12T18:00:00+00:00", "HighestAwardKind": "mastery-hardcore", "HighestAwardDate": "2022-12-12T18:00:00+00:00"},
+      {"GameID": 88812, "Title": "Chrono Trigger", "ImageIcon": "/Images/032165.png", "ConsoleID": 3, "ConsoleName": "SNES / Super Famicom", "MaxPossible": 300, "NumAwarded": 50, "NumAwardedHardcore": 12, "MostRecentAwardedDate": "2025-01-15T12:12:12+00:00", "HighestAwardKind": null, "HighestAwardDate": null},
+      {"GameID": 24555, "Title": "Mega Man X", "ImageIcon": "/Images/011111.png", "ConsoleID": 3, "ConsoleName": "SNES / Super Famicom", "MaxPossible": 200, "NumAwarded": 199, "NumAwardedHardcore": 150, "MostRecentAwardedDate": "2024-07-04T08:00:00+00:00", "HighestAwardKind": "beaten-softcore", "HighestAwardDate": "2024-07-04T08:00:00+00:00"},
+      {"GameID": 44777, "Title": "Final Fantasy VII", "ImageIcon": "/Images/022222.png", "ConsoleID": 5, "ConsoleName": "PlayStation", "MaxPossible": 400, "NumAwarded": 60, "NumAwardedHardcore": 20, "MostRecentAwardedDate": "2024-11-20T21:45:00+00:00", "HighestAwardKind": null, "HighestAwardDate": null},
+      {"GameID": 66789, "Title": "Street Fighter II Turbo", "ImageIcon": "/Images/044444.png", "ConsoleID": 3, "ConsoleName": "SNES / Super Famicom", "MaxPossible": 150, "NumAwarded": 10, "NumAwardedHardcore": 3, "MostRecentAwardedDate": "2025-06-10T17:33:00+00:00", "HighestAwardKind": null, "HighestAwardDate": null},
+      {"GameID": 73991, "Title": "Sonic 2", "ImageIcon": "/Images/055555.png", "ConsoleID": 1, "ConsoleName": "Mega Drive / Genesis", "MaxPossible": 180, "NumAwarded": 30, "NumAwardedHardcore": 20, "MostRecentAwardedDate": "2025-08-01T10:00:00+00:00", "HighestAwardKind": null, "HighestAwardDate": null},
+      {"GameID": 48221, "Title": "Donkey Kong Country", "ImageIcon": "/Images/066666.png", "ConsoleID": 3, "ConsoleName": "SNES / Super Famicom", "MaxPossible": 220, "NumAwarded": 0, "NumAwardedHardcore": 0, "MostRecentAwardedDate": null, "HighestAwardKind": null, "HighestAwardDate": null},
+      {"GameID": 50001, "Title": "Metroid Fusion", "ImageIcon": "/Images/077777.png", "ConsoleID": 7, "ConsoleName": "Game Boy Advance", "MaxPossible": 220, "NumAwarded": 22, "NumAwardedHardcore": 20, "MostRecentAwardedDate": "2025-03-18T15:00:00+00:00", "HighestAwardKind": null, "HighestAwardDate": null}
+    ]
+  }
+  </script>
+
+  <script>
+    // ===== Utilities =====
+    const $ = (sel) => document.querySelector(sel);
+    const byId = (id) => document.getElementById(id);
+    const CX = 360, CY = 360; // center (canvas is 720)
+
+    function formatDate(input){ if(!input) return null; const d = new Date(input); if(isNaN(d)) return null; return d; }
+    function daysAgo(d){ const now = Date.now(); return Math.floor((now - d.getTime())/86400000); }
+
+    // ===== State =====
+    let games = [];       // full set after load (objects)
+    let pool = [];        // filtered list used by spinner
+    let currentAngle = 0; let RAF = 0; let selectedIndex = null;
+
+    const canvas = byId('wheel');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height; const R = Math.min(W,H)/2 - 14;
+
+    // ===== Data source controls =====
+    const sourceSel = byId('source');
+    const apiUser = byId('apiUser');
+    const apiKey  = byId('apiKey');
+    const proxy   = byId('proxy');
+    const pageSizeSel = byId('pageSize');
+
+    const LS_KEY = 'ra-picker-config-v1';
+    function saveConfig(){
+      const cfg = {
+        source: sourceSel.value,
+        apiUser: apiUser.value.trim(),
+        apiKey: apiKey.value,
+        proxy: proxy.value.trim(),
+        pageSize: pageSizeSel.value,
+        onlyUnfinished: byId('onlyUnfinished').checked,
+        hardcoreOnly: byId('hardcoreOnly').checked,
+        excludeHacks: byId('excludeHacks').checked,
+        excludeRecent: byId('excludeRecent').checked,
+        consoleFilter: byId('consoleFilter').value,
+        search: byId('search').value,
+        weightMode: byId('weightMode').value,
+      };
+      localStorage.setItem(LS_KEY, JSON.stringify(cfg));
+    }
+    function loadConfig(){
+      try { const cfg = JSON.parse(localStorage.getItem(LS_KEY)||'{}');
+        if(cfg.source) sourceSel.value = cfg.source;
+        if(cfg.apiUser) apiUser.value = cfg.apiUser;
+        if(cfg.apiKey) apiKey.value = cfg.apiKey;
+        if(cfg.proxy) proxy.value = cfg.proxy;
+        if(cfg.pageSize) pageSizeSel.value = cfg.pageSize;
+        byId('onlyUnfinished').checked = !!cfg.onlyUnfinished;
+        byId('hardcoreOnly').checked = !!cfg.hardcoreOnly;
+        byId('excludeHacks').checked = !!cfg.excludeHacks;
+        byId('excludeRecent').checked = !!cfg.excludeRecent;
+        byId('consoleFilter').value = cfg.consoleFilter || '';
+        byId('search').value = cfg.search || '';
+        if(cfg.weightMode) byId('weightMode').value = cfg.weightMode;
+      } catch(e){}
+    }
+    loadConfig();
+
+    // show/hide relevant inputs
+    function updateSourceUI(){
+      const mode = sourceSel.value;
+      byId('apiUserWrap').style.display = mode==='api' ? 'block' : 'none';
+      byId('apiKeyWrap').style.display  = mode==='api' ? 'block' : 'none';
+      byId('proxyRow').style.display    = mode==='api' ? 'flex' : 'none';
+      byId('pasteBox').open = mode==='paste';
+    }
+    updateSourceUI();
+    sourceSel.addEventListener('change', ()=>{ updateSourceUI(); saveConfig(); });
+
+    // ===== Transformers =====
+    function normalizeCompletion(json){
+      const res = (json.Results || json.results || []).map(g=>({
+        gameId: g.GameID ?? g.gameId,
+        title: g.Title ?? g.title,
+        consoleName: g.ConsoleName ?? g.consoleName ?? '',
+        icon: g.ImageIcon ?? g.imageIcon ?? '',
+        highestAwardKind: g.HighestAwardKind ?? g.highestAwardKind ?? null,
+        mostRecentDate: formatDate(g.MostRecentAwardedDate ?? g.mostRecentAwardedDate ?? null),
+        numAwarded: g.NumAwarded ?? g.numAwarded ?? 0,
+        numAwardedHardcore: g.NumAwardedHardcore ?? g.numAwardedHardcore ?? 0,
+      })).filter(g=> g && g.title && g.gameId);
+      return res;
+    }
+
+    // ===== Loaders =====
+    async function loadMock(){
+      const data = JSON.parse(byId('mockCompletion').textContent);
+      return normalizeCompletion(data);
+    }
+
+    async function loadPasted(){
+      let text = byId('pasteJson').value.trim();
+      if(!text) throw new Error('Paste JSON first.');
+      let data; try { data = JSON.parse(text); } catch(e){ throw new Error('Invalid JSON'); }
+      return normalizeCompletion(data);
+    }
+
+    async function fetchJSON(url){
+      const prox = proxy.value.trim();
+      const full = prox ? (prox.replace(/\/?$/, '/') + encodeURIComponent(url)) : url;
+      const res = await fetch(full);
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      return res.json();
+    }
+
+    async function loadAPI(){
+      const user = apiUser.value.trim();
+      const key = apiKey.value.trim();
+      if(!user || !key) throw new Error('Provide username and web API key.');
+      const pageSize = Number(pageSizeSel.value);
+      const base = 'https://retroachievements.org/API/API_GetUserCompletionProgress.php';
+      let offset = 0; let all = []; let total = Infinity; let guard = 0;
+      while(offset < total && guard < 10){ // up to 10 pages * 500 = 5000
+        const url = `${base}?u=${encodeURIComponent(user)}&y=${encodeURIComponent(key)}&c=${pageSize}&o=${offset}`;
+        const page = await fetchJSON(url);
+        const normalized = normalizeCompletion(page);
+        all = all.concat(normalized);
+        const tot = page.Total ?? page.total ?? normalized.length;
+        total = typeof tot === 'number' ? tot : normalized.length;
+        offset += pageSize; guard++;
+      }
+      // de-dupe by gameId (some users may have dupes from legacy entries)
+      const byIdMap = new Map();
+      for(const g of all){ if(!byIdMap.has(g.gameId)) byIdMap.set(g.gameId, g); }
+      return [...byIdMap.values()];
+    }
+
+    async function loadData(){
+      try{
+        let data = [];
+        if(sourceSel.value==='mock') data = await loadMock();
+        else if(sourceSel.value==='paste') data = await loadPasted();
+        else data = await loadAPI();
+        games = data;
+        applyFilters();
+        announce('Loaded '+games.length+' games');
+        saveConfig();
+      }catch(e){
+        alert('Load failed: '+(e?.message||e));
+      }
+    }
+
+    byId('loadBtn').addEventListener('click', loadData);
+    byId('loadPasteBtn').addEventListener('click', loadData);
+    [apiUser, apiKey, proxy, pageSizeSel].forEach(el=> el.addEventListener('change', saveConfig));
+
+    // ===== Filters and Pool =====
+    function applyFilters(){
+      const onlyUnfinished = byId('onlyUnfinished').checked;
+      const hardcoreOnly = byId('hardcoreOnly').checked;
+      const excludeHacks = byId('excludeHacks').checked;
+      const excludeRecent = byId('excludeRecent').checked;
+      const consoleQuery = byId('consoleFilter').value.trim().toLowerCase();
+      const search = byId('search').value.trim().toLowerCase();
+
+      pool = games.filter(g=>{
+        if(excludeHacks && /^~hack~|\(homebrew\)/i.test(g.title)) return false;
+        if(consoleQuery && !(g.consoleName||'').toLowerCase().includes(consoleQuery)) return false;
+        if(search && !g.title.toLowerCase().includes(search)) return false;
+        if(onlyUnfinished && (g.highestAwardKind||'').includes('mastery')) return false;
+        if(hardcoreOnly && g.numAwardedHardcore<=0) return false;
+        if(excludeRecent && g.mostRecentDate && daysAgo(g.mostRecentDate) < 14) return false;
+        return true;
+      });
+
+      renderList();
+      redrawWheel();
+    }
+
+    ['onlyUnfinished','hardcoreOnly','excludeHacks','excludeRecent','consoleFilter','search','weightMode']
+      .forEach(id=> byId(id).addEventListener('input', ()=>{ saveConfig(); applyFilters(); }));
+
+    // ===== List rendering =====
+    const gameList = byId('gameList');
+    function renderList(){
+      byId('poolMeta').textContent = `${pool.length} in pool (of ${games.length})`;
+      gameList.innerHTML = pool.map(g=>{
+        const url = `https://retroachievements.org/game/${g.gameId}`;
+        return `
+          <div class="game">
+            <img src="${g.icon}" alt="" onerror="this.src='data:image/gif;base64,R0lGODlhAQABAAAAACw='"/>
+            <div>
+              <div class="gtitle">${escapeHtml(g.title)}</div>
+              <div class="meta">${escapeHtml(g.consoleName || '')}</div>
+            </div>
+            <a class="badge" href="${url}" target="_blank" rel="noopener">Open</a>
+          </div>
+        `;
+      }).join('');
+      byId('countMeta').textContent = pool.length + ' slices';
+    }
+
+    function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m])); }
+
+    // ===== Wheel drawing and spin =====
+    function redrawWheel(angle=currentAngle){
+      const n = Math.max(2, pool.length || 2);
+      ctx.clearRect(0,0,W,H);
+      const slice = (Math.PI*2)/n;
+
+      // base shadow
+      ctx.save(); ctx.beginPath(); ctx.arc(CX, CY, R+8, 0, Math.PI*2); ctx.fillStyle = '#020617'; ctx.fill(); ctx.restore();
+
+      for(let i=0;i<n;i++){
+        const start = i*slice + angle;
+        const end = start + slice;
+        const hue = Math.round((360*i)/n);
+        ctx.beginPath(); ctx.moveTo(CX, CY); ctx.arc(CX, CY, R, start, end); ctx.closePath();
+        ctx.fillStyle = `hsl(${hue} 85% 45% / .92)`; ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(CX, CY); ctx.arc(CX, CY, R, start, end); ctx.lineTo(CX, CY); ctx.stroke();
+
+        const label = (pool[i]?.title) || '';
+        const center = start + slice/2;
+        ctx.save(); ctx.translate(CX, CY); ctx.rotate(center);
+        const maxLen = 28; const toDraw = label.length>maxLen ? label.slice(0, maxLen-1)+'…' : label;
+        const size = Math.max(12, Math.min(24, Math.floor(230 / Math.max(4, n))));
+        ctx.font = `700 ${size}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+        ctx.textAlign = 'right'; ctx.fillStyle = '#0b1220';
+        ctx.fillText(toDraw, R - 18, 6);
+        ctx.restore();
+      }
+      // hub
+      ctx.beginPath(); ctx.arc(CX, CY, 46, 0, Math.PI*2); ctx.fillStyle = '#e2e8f0'; ctx.fill();
+      ctx.beginPath(); ctx.arc(CX, CY, 36, 0, Math.PI*2); ctx.fillStyle = '#0b1220'; ctx.fill();
+    }
+
+    function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
+
+    function pickIndexByWeights(){
+      if(pool.length===0) return -1;
+      const mode = byId('weightMode').value;
+      let weights = pool.map(g=>1);
+      if(mode==='older'){
+        weights = pool.map(g=>{
+          const d = g.mostRecentDate ? Math.max(1, daysAgo(g.mostRecentDate)) : 365;
+          return 1 + Math.log2(d+1); // gentle bump for older
+        });
+      } else if(mode==='unfinished'){
+        weights = pool.map(g=> (g.highestAwardKind||'').includes('mastery') ? 0.5 : 2.0);
+      }
+      // normalize and sample
+      const sum = weights.reduce((a,b)=>a+b,0);
+      let r = Math.random()*sum;
+      for(let i=0;i<weights.length;i++){ r -= weights[i]; if(r<=0) return i; }
+      return weights.length-1;
+    }
+
+    function spin(){
+      if(pool.length < 2){ announce('Load at least 2 games.'); return; }
+      const n = pool.length; const index = pickIndexByWeights(); if(index<0){ announce('No games in pool.'); return; }
+      const slice = (Math.PI*2)/n; const sliceCenter = index*slice + slice/2;
+      const turns = 6 + Math.floor(Math.random()*4);
+      const target = currentAngle + (Math.PI*2*turns) + (-Math.PI/2 - sliceCenter);
+      const startAngle = currentAngle; const delta = target - startAngle; const duration = 4600;
+      let start = performance.now(); cancelAnimationFrame(RAF);
+      byId('spinBtn').disabled = true;
+      const anim = (now)=>{
+        const t = Math.min(1, (now - start)/duration);
+        const a = startAngle + delta*easeOutCubic(t);
+        redrawWheel(a);
+        if(t<1){ RAF = requestAnimationFrame(anim); }
+        else { currentAngle = a % (Math.PI*2); selectedIndex = index; showResult(pool[index]); byId('spinBtn').disabled = false; fireConfetti(); }
+      };
+      RAF = requestAnimationFrame(anim);
+    }
+
+    function showResult(g){
+      if(!g){ byId('resultTitle').textContent = '—'; return; }
+      byId('resultTitle').textContent = g.title;
+      byId('resultIcon').src = g.icon || '';
+      const url = `https://retroachievements.org/game/${g.gameId}`;
+      byId('resultLink').href = url;
+      // copy link
+      byId('copyLink').onclick = (e)=>{ e.preventDefault(); navigator.clipboard.writeText(url).then(()=> announce('Link copied')); };
+    }
+
+    function announce(msg){ byId('resultTitle').innerHTML = `<strong>${escapeHtml(msg)}</strong>`; }
+
+    // ===== Confetti (tiny, no deps) =====
+    function fireConfetti(){
+      const el = document.createElement('div');
+      const count = 120;
+      el.style.position='fixed'; el.style.inset='0'; el.style.pointerEvents='none'; el.style.zIndex=9999;
+      const frags = [];
+      for(let i=0;i<count;i++){
+        const s = document.createElement('i');
+        const size = 6 + Math.random()*6; const left = Math.random()*100; const rot = Math.random()*360;
+        s.style.position='absolute'; s.style.width=size+'px'; s.style.height=size+'px'; s.style.left=left+'%'; s.style.top='-10px'; s.style.background=`hsl(${Math.random()*360} 90% 60%)`; s.style.transform=`rotate(${rot}deg)`; s.style.borderRadius:'2px'; s.style.opacity='0.9';
+        el.appendChild(s); frags.push({e:s, vy: (2+Math.random()*3), vx: (Math.random()-.5)*0.6});
+      }
+      document.body.appendChild(el);
+      const start = performance.now();
+      function step(now){
+        const t = (now-start)/1000;
+        for(const f of frags){ const y = f.vy*t*120; const x = f.vx*t*120; f.e.style.transform += ` translate(${x}px, ${y}px)`; f.e.style.opacity = String(Math.max(0,1 - t/2)); }
+        if(t<2) requestAnimationFrame(step); else el.remove();
+      }
+      requestAnimationFrame(step);
+    }
+
+    // ===== Wire up buttons
+    byId('spinBtn').addEventListener('click', ()=> spin());
+    byId('shuffleBtn').addEventListener('click', ()=>{ pool = shuffle(pool); renderList(); redrawWheel(currentAngle); announce('Shuffled'); });
+    byId('confettiBtn').addEventListener('click', fireConfetti);
+
+    function shuffle(arr){ const a = arr.slice(); for(let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+    // ===== Initial load (mock) =====
+    (async ()=>{ await loadData(); redrawWheel(0); setTimeout(()=>{ if(pool.length>=2) spin(); }, 400); })();
+  </script>
+
+  <footer>
+    <p>This app targets the RetroAchievements <code class="badge">get-user-completion-progress</code> endpoint for your personal game pool. You can also paste JSON or use the inline mock for testing. Pointer at top marks the selection.</p>
+  </footer>
+</body>
+</html>
