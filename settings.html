@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <h1>Settings</h1>
+  <form id="prefsForm">
+    <label>Data Source
+      <select id="raDataSource">
+        <option value="api">RetroAchievements API</option>
+        <option value="mock">Mock Data</option>
+        <option value="local">Local JSON File</option>
+      </select>
+    </label>
+    <label id="usernameLabel">RA Username <input id="username"></label>
+    <label id="apiKeyLabel">RA API Key <input id="apiKey"></label>
+    <label id="localFileLabel">Local File <input id="localFile" placeholder="data/mock_ra.json"></label>
+    <button type="submit">Save</button>
+  </form>
+  <script type="module">
+    import { loadPreferences, savePreferences } from './js/preferences.js';
+    const form = document.getElementById('prefsForm');
+    const raDataSource = document.getElementById('raDataSource');
+    const username = document.getElementById('username');
+    const apiKey = document.getElementById('apiKey');
+    const localFile = document.getElementById('localFile');
+    const usernameLabel = document.getElementById('usernameLabel');
+    const apiKeyLabel = document.getElementById('apiKeyLabel');
+    const localFileLabel = document.getElementById('localFileLabel');
+
+    const prefs = loadPreferences();
+    raDataSource.value = prefs.raDataSource;
+    username.value = prefs.username;
+    apiKey.value = prefs.apiKey;
+    localFile.value = prefs.localDataPath;
+
+    function updateVisibility() {
+      const mode = raDataSource.value;
+      usernameLabel.style.display = mode === 'api' ? '' : 'none';
+      apiKeyLabel.style.display = mode === 'api' ? '' : 'none';
+      localFileLabel.style.display = mode === 'local' ? '' : 'none';
+    }
+    raDataSource.addEventListener('change', updateVisibility);
+    updateVisibility();
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      savePreferences({
+        raDataSource: raDataSource.value,
+        username: username.value,
+        apiKey: apiKey.value,
+        localDataPath: localFile.value
+      });
+      alert('Preferences saved');
+    });
+  </script>
+</body>
+</html>

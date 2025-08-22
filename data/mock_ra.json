@@ -1,0 +1,16 @@
+[
+  {
+    "GameID": 1,
+    "Title": "Retro Game 1",
+    "Console": "NES",
+    "MaxPossible": 10,
+    "NumAchieved": 5
+  },
+  {
+    "GameID": 2,
+    "Title": "Retro Game 2",
+    "Console": "SNES",
+    "MaxPossible": 20,
+    "NumAchieved": 10
+  }
+]
